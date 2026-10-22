@@ -670,18 +670,27 @@
     // Yükleme Takibi
     const loadingCurtain = document.querySelector('#loading-curtain');
     const loadingDisplayText = document.querySelector('#loading-display-text');
-    const obs = new MutationObserver(() => {
-      const origLoading = document.querySelector('#loading');
-      if (origLoading && !origLoading.hidden) {
+    const origLoading = document.querySelector('#loading');
+
+    function checkLoading() {
+      if (origLoading && !origLoading.hidden && origLoading.style.display !== 'none') {
         loadingCurtain.hidden = false;
         if (origLoading.textContent) {
-          loadingDisplayText.textContent = origLoading.textContent.replace('Preparando', 'Yükleniyor').replace('Vice City', 'Vice City');
+          const match = origLoading.textContent.match(/(\d+)%/);
+          if (match) {
+            loadingDisplayText.textContent = 'Vice City Yükleniyor · %' + match[1];
+          } else {
+            loadingDisplayText.textContent = 'Vice City Açılıyor...';
+          }
         }
       } else {
         loadingCurtain.hidden = true;
       }
-    });
-    obs.observe(document.querySelector('#loading'), { attributes: true, childList: true, characterData: true });
+    }
+
+    const obs = new MutationObserver(checkLoading);
+    obs.observe(origLoading, { attributes: true, childList: true, characterData: true, subtree: true });
+    setInterval(checkLoading, 200);
   </script>
 
   <script type="module" src="/play/entry.js"></script>
