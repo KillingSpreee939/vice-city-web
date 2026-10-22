@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#ff007f">
-  <title>GRAND THEFT AUTO: VICE CITY · WebAssembly Edition</title>
+  <meta name="theme-color" content="#d91b7a">
+  <title>Vice City Web · Tarayıcıda Doğrudan Oyna</title>
   <link rel="icon" href="https://gta.rabisco.net/assets/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Outfit:wght@300;400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/play/play.css">
 
   <style>
     :root {
-      --neon-pink: #ff007f;
-      --neon-purple: #9b00e8;
-      --neon-cyan: #00f0ff;
-      --neon-yellow: #ffb800;
-      --deep-bg: #090314;
-      --glass: rgba(18, 10, 34, 0.75);
-      --glass-border: rgba(255, 0, 127, 0.3);
+      --pink: #ff1379;
+      --cyan: #00f5ff;
+      --purple: #8b00ff;
+      --gold: #ffbe00;
+      --bg: #070312;
+      --card-bg: rgba(18, 10, 36, 0.72);
+      --card-border: rgba(255, 19, 121, 0.25);
     }
 
     * { box-sizing: border-box; }
@@ -27,24 +27,24 @@
     body {
       margin: 0;
       padding: 0;
-      background: var(--deep-bg);
+      background: var(--bg);
       color: #fff;
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       overflow: hidden;
       height: 100vh;
       width: 100vw;
       user-select: none;
     }
 
-    /* 🎮 Oyun Sahnesi (Canvas) */
+    /* 🎮 Canvas Oyun Alanı */
     #canvas {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       background: #000;
-      box-shadow: 0 0 60px rgba(255, 0, 127, 0.25), 0 0 120px rgba(0, 240, 255, 0.15);
-      border-radius: 4px;
+      box-shadow: 0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(255, 19, 121, 0.2);
+      border-radius: 6px;
     }
 
     #fps {
@@ -54,482 +54,573 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
       font-weight: 700;
-      color: #39ff14;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid rgba(57, 255, 20, 0.3);
+      color: #00ffaa;
+      background: rgba(0, 0, 0, 0.75);
+      padding: 5px 12px;
+      border-radius: 30px;
+      border: 1px solid rgba(0, 255, 170, 0.3);
       z-index: 100;
-      letter-spacing: 0.5px;
+      backdrop-filter: blur(8px);
     }
 
-    /* 🌆 SYNTHWAVE / MIAMI GÖKYÜZÜ VE SAHNE */
-    .synth-stage {
+    /* 🌆 ULTRA MODERN RETRO-FUTURISTIC SAHNE */
+    .viewport-overlay {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 40px 20px;
+      padding: 30px 24px;
       z-index: 10;
-      background: radial-gradient(circle at 50% 20%, #2a0845 0%, #15002a 50%, var(--deep-bg) 90%);
-      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s ease;
+      background: 
+        radial-gradient(circle at 50% 15%, rgba(139, 0, 255, 0.28) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(255, 19, 121, 0.15) 0%, transparent 50%),
+        linear-gradient(180deg, #0d061c 0%, var(--bg) 100%);
+      transition: opacity 0.6s ease, transform 0.6s ease;
       overflow: hidden;
     }
 
-    /* Hareket Eden 3D Izgara (Grid) */
-    .synth-grid {
+    /* Hareketli Synthwave Taban Izgarası */
+    .retro-grid {
       position: absolute;
-      bottom: 0;
+      bottom: -40px;
       left: -50%;
       width: 200%;
-      height: 48%;
-      background: 
-        linear-gradient(to bottom, rgba(9, 3, 20, 0.05), #090314 95%),
-        linear-gradient(rgba(255, 0, 127, 0.35) 2px, transparent 2px),
-        linear-gradient(90deg, rgba(0, 240, 255, 0.35) 2px, transparent 2px);
-      background-size: 100% 100%, 70px 70px, 70px 70px;
-      transform: perspective(300px) rotateX(65deg);
-      animation: grid-scroll 3s linear infinite;
-      z-index: 1;
+      height: 50%;
+      background-image: 
+        linear-gradient(to bottom, rgba(7, 3, 18, 0.1), #070312 90%),
+        linear-gradient(rgba(255, 19, 121, 0.3) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(0, 245, 255, 0.3) 2px, transparent 2px);
+      background-size: 100% 100%, 64px 64px, 64px 64px;
+      transform: perspective(280px) rotateX(68deg);
+      animation: grid-roll 2.8s linear infinite;
       pointer-events: none;
-      opacity: 0.8;
+      z-index: 1;
+      opacity: 0.75;
     }
 
-    @keyframes grid-scroll {
+    @keyframes grid-roll {
       0% { background-position: 0 0, 0 0, 0 0; }
-      100% { background-position: 0 0, 0 70px, 0 0; }
+      100% { background-position: 0 0, 0 64px, 0 0; }
     }
 
     /* Batan Neon Güneş */
-    .retro-sun {
+    .sunset-glow {
       position: absolute;
-      top: 14%;
+      top: 10%;
       left: 50%;
       transform: translateX(-50%);
-      width: 260px;
-      height: 260px;
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
-      background: linear-gradient(to top, #ff007f 0%, #ff8c00 70%, #ffee00 100%);
-      box-shadow: 0 0 80px rgba(255, 0, 127, 0.7), 0 0 140px rgba(255, 140, 0, 0.5);
-      z-index: 1;
+      background: linear-gradient(180deg, #ffe600 0%, #ff5e00 45%, #ff007f 100%);
+      box-shadow: 0 0 90px rgba(255, 94, 0, 0.5), 0 0 160px rgba(255, 0, 127, 0.4);
       pointer-events: none;
+      z-index: 1;
+      opacity: 0.8;
       -webkit-mask-image: linear-gradient(to bottom, 
-        black 0%, black 50%, 
-        transparent 50%, transparent 54%, 
-        black 54%, black 62%, 
-        transparent 62%, transparent 68%, 
-        black 68%, black 78%, 
-        transparent 78%, transparent 86%, 
-        black 86%, black 100%);
+        black 0%, black 52%, 
+        transparent 52%, transparent 56%, 
+        black 56%, black 64%, 
+        transparent 64%, transparent 70%, 
+        black 70%, black 80%, 
+        transparent 80%, transparent 88%, 
+        black 88%, black 100%);
       mask-image: linear-gradient(to bottom, 
-        black 0%, black 50%, 
-        transparent 50%, transparent 54%, 
-        black 54%, black 62%, 
-        transparent 62%, transparent 68%, 
-        black 68%, black 78%, 
-        transparent 78%, transparent 86%, 
-        black 86%, black 100%);
-      opacity: 0.85;
-      animation: pulse-sun 4s ease-in-out infinite alternate;
+        black 0%, black 52%, 
+        transparent 52%, transparent 56%, 
+        black 56%, black 64%, 
+        transparent 64%, transparent 70%, 
+        black 70%, black 80%, 
+        transparent 80%, transparent 88%, 
+        black 88%, black 100%);
+      animation: sun-pulse 4s ease-in-out infinite alternate;
     }
 
-    @keyframes pulse-sun {
-      0% { transform: translateX(-50%) scale(1); filter: drop-shadow(0 0 30px #ff007f); }
-      100% { transform: translateX(-50%) scale(1.03); filter: drop-shadow(0 0 50px #ff8c00); }
+    @keyframes sun-pulse {
+      0% { transform: translateX(-50%) scale(0.98); filter: drop-shadow(0 0 25px rgba(255, 94, 0, 0.6)); }
+      100% { transform: translateX(-50%) scale(1.02); filter: drop-shadow(0 0 45px rgba(255, 0, 127, 0.8)); }
     }
 
-    /* Arka Plan Palmiye Silüetleri */
-    .palms-deco {
+    /* Palmiye Silüet Katmanı */
+    .palms-bg {
       position: absolute;
       bottom: 0;
+      left: 0;
       width: 100%;
-      height: 400px;
-      background-image: url('https://gta.rabisco.net/assets/play/268ff48be4e874becefc3a56bb83114df7d32a48d0f9c59ccfa2dda9f09dae29.webp');
-      background-size: cover;
-      background-position: bottom center;
-      opacity: 0.35;
-      z-index: 2;
+      height: 380px;
+      background: url('https://gta.rabisco.net/assets/play/268ff48be4e874becefc3a56bb83114df7d32a48d0f9c59ccfa2dda9f09dae29.webp') bottom center / cover no-repeat;
+      opacity: 0.28;
       pointer-events: none;
-      filter: saturate(1.8) contrast(1.2);
+      z-index: 2;
+      filter: saturate(1.6);
     }
 
-    /* 🏷️ ÜST BİLGİ ROZETİ */
-    .top-badge {
+    /* 👑 Üst Navigasyon & Rozet */
+    .top-bar {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 5;
+    }
+
+    .badge-capsule {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 20px;
-      background: rgba(255, 0, 127, 0.12);
-      border: 1px solid rgba(255, 0, 127, 0.4);
-      border-radius: 50px;
-      backdrop-filter: blur(12px);
+      padding: 7px 18px;
+      background: rgba(255, 19, 121, 0.12);
+      border: 1px solid rgba(255, 19, 121, 0.35);
+      border-radius: 40px;
       font-size: 13px;
       font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--neon-cyan);
-      box-shadow: 0 0 20px rgba(255, 0, 127, 0.2);
-      z-index: 5;
-      animation: float 3s ease-in-out infinite alternate;
+      letter-spacing: 1.5px;
+      color: var(--cyan);
+      box-shadow: 0 0 20px rgba(255, 19, 121, 0.15);
+      backdrop-filter: blur(10px);
     }
 
-    .pulse-dot {
+    .live-dot {
       width: 8px;
       height: 8px;
+      background: var(--pink);
       border-radius: 50%;
-      background: var(--neon-pink);
-      box-shadow: 0 0 10px var(--neon-pink);
-      animation: blink 1.2s infinite;
+      box-shadow: 0 0 10px var(--pink);
+      animation: pulse-dot 1.4s infinite;
     }
 
-    @keyframes blink {
+    @keyframes pulse-dot {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.3; transform: scale(0.7); }
     }
 
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      100% { transform: translateY(-5px); }
+    .quick-actions {
+      display: flex;
+      gap: 12px;
     }
 
-    /* 🌴 ANA BAŞLIK & LOGO */
-    .hero-content {
+    .glass-btn-sm {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 16px;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .glass-btn-sm:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    /* 🌴 Ana Karşılama Alanı (Hero) */
+    .main-hero {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
       z-index: 5;
-      margin-top: 20px;
+      margin-top: 10px;
     }
 
-    .title-subtext {
-      font-size: 16px;
+    .grand-title {
+      font-size: 15px;
       font-weight: 800;
-      letter-spacing: 8px;
+      letter-spacing: 9px;
       text-transform: uppercase;
-      color: #fff;
-      text-shadow: 0 0 10px var(--neon-cyan);
+      color: #ffffff;
+      text-shadow: 0 0 12px var(--cyan);
       margin-bottom: 2px;
     }
 
-    .vice-city-logo {
+    .vice-logo {
       font-family: 'Righteous', cursive;
-      font-size: clamp(52px, 8vw, 92px);
-      line-height: 1;
+      font-size: clamp(54px, 8.5vw, 98px);
+      line-height: 0.95;
       margin: 0;
-      background: linear-gradient(180deg, #ffffff 0%, #ffe0f0 45%, #ff007f 70%, #800045 100%);
+      background: linear-gradient(180deg, #ffffff 0%, #ffdef0 40%, var(--pink) 75%, #770038 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      filter: drop-shadow(4px 4px 0px #00f0ff) drop-shadow(0 0 35px rgba(255, 0, 127, 0.8));
-      transform: skew(-8deg) rotate(-2deg);
-      letter-spacing: 2px;
+      filter: drop-shadow(4px 4px 0px var(--cyan)) drop-shadow(0 0 35px rgba(255, 19, 121, 0.8));
+      transform: skew(-7deg) rotate(-2deg);
+      letter-spacing: 1px;
     }
 
-    .hero-desc {
+    .hero-tagline {
       margin-top: 18px;
-      font-size: 17px;
-      font-weight: 300;
-      color: #e2d9f3;
-      max-width: 520px;
-      line-height: 1.6;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      font-size: 18px;
+      font-weight: 400;
+      color: #e4ddf3;
+      max-width: 560px;
+      line-height: 1.5;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
     }
 
-    /* 🎮 DEV BAŞLAT BUTONU */
-    .cta-area {
+    /* 🎮 Dev "OYUNU BAŞLAT" Butonu */
+    .action-container {
+      margin-top: 25px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 25px;
       z-index: 5;
     }
 
-    .cyber-btn {
+    .play-trigger {
       position: relative;
-      padding: 20px 65px;
+      padding: 22px 75px;
       font-family: 'Righteous', cursive;
-      font-size: 24px;
-      letter-spacing: 2px;
-      color: #ffffff;
+      font-size: 26px;
+      letter-spacing: 2.5px;
+      color: #fff;
       text-transform: uppercase;
-      background: linear-gradient(135deg, #ff007f 0%, #b800e6 50%, #00f0ff 100%);
+      background: linear-gradient(135deg, var(--pink) 0%, var(--purple) 50%, var(--cyan) 100%);
       background-size: 200% 200%;
       border: none;
       border-radius: 60px;
       cursor: pointer;
-      box-shadow: 0 0 35px rgba(255, 0, 127, 0.7), 0 0 70px rgba(184, 0, 230, 0.4);
-      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      animation: gradient-flow 4s ease infinite;
+      box-shadow: 0 0 40px rgba(255, 19, 121, 0.75), 0 0 80px rgba(139, 0, 255, 0.4);
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: btn-glow 4s ease infinite;
       overflow: hidden;
     }
 
-    @keyframes gradient-flow {
+    @keyframes btn-glow {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
 
-    .cyber-btn::before {
+    .play-trigger:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 0 55px rgba(255, 19, 121, 0.95), 0 0 110px rgba(0, 245, 255, 0.7);
+    }
+
+    .play-trigger:active {
+      transform: translateY(2px) scale(0.98);
+    }
+
+    .play-trigger::before {
       content: '';
       position: absolute;
       top: 0; left: -100%;
       width: 100%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
       transition: 0.5s;
     }
 
-    .cyber-btn:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: 0 0 50px rgba(255, 0, 127, 0.95), 0 0 100px rgba(0, 240, 255, 0.6);
-    }
-
-    .cyber-btn:hover::before {
+    .play-trigger:hover::before {
       left: 100%;
     }
 
-    .cyber-btn:active {
-      transform: translateY(1px) scale(0.98);
-    }
-
-    .status-msg {
+    .status-alert {
       margin-top: 14px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 14px;
-      color: var(--neon-cyan);
+      color: var(--cyan);
       min-height: 22px;
-      text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+      text-shadow: 0 0 8px rgba(0, 245, 255, 0.6);
     }
 
-    /* 💎 ÖZELLİK KARTLARI (3'LÜ KUTUCUKLAR) */
-    .feature-cards {
+    /* 💎 3'lü Efsane Özellik Kartları (Sade & Anlaşılır) */
+    .cards-row {
       display: flex;
       gap: 16px;
-      max-width: 900px;
+      max-width: 940px;
       width: 100%;
       justify-content: center;
       z-index: 5;
-      margin-top: 20px;
+      margin-top: 15px;
     }
 
-    .f-card {
+    .info-card {
       flex: 1;
-      max-width: 260px;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      border-radius: 16px;
-      padding: 16px;
-      backdrop-filter: blur(14px);
-      text-align: left;
+      max-width: 280px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       transition: all 0.3s ease;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      text-align: left;
     }
 
-    .f-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--neon-cyan);
-      box-shadow: 0 12px 30px rgba(0, 240, 255, 0.2);
+    .info-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--cyan);
+      box-shadow: 0 14px 35px rgba(0, 245, 255, 0.25);
     }
 
-    .f-icon {
-      font-size: 24px;
+    .card-icon {
+      font-size: 26px;
       margin-bottom: 8px;
     }
 
-    .f-title {
-      font-size: 14px;
+    .card-heading {
+      font-size: 15px;
       font-weight: 700;
       color: #fff;
       margin-bottom: 4px;
     }
 
-    .f-desc {
-      font-size: 12px;
-      color: #b5a9cc;
-      line-height: 1.4;
+    .card-text {
+      font-size: 12.5px;
+      color: #b8accc;
+      line-height: 1.45;
     }
 
-    /* 🕹️ TUŞ KOMBİNASYONU BAR'I */
-    .controls-bar {
+    /* 🕹️ Klavye Kontrolleri Çubuğu */
+    .controls-strip {
       display: flex;
       align-items: center;
-      gap: 24px;
-      background: rgba(10, 4, 20, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      gap: 22px;
+      background: rgba(12, 6, 24, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: 10px 24px;
       border-radius: 40px;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       z-index: 5;
       font-size: 13px;
-      color: #ddd;
+      color: #e0d8ef;
     }
 
-    .key-group {
+    .ctrl-item {
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     kbd {
-      display: inline-block;
       font-family: 'JetBrains Mono', monospace;
       font-weight: 700;
       font-size: 12px;
-      background: linear-gradient(180deg, #2b1442 0%, #150824 100%);
-      color: var(--neon-cyan);
-      padding: 3px 8px;
+      background: linear-gradient(180deg, #2b1342 0%, #170928 100%);
+      color: var(--cyan);
+      padding: 4px 9px;
       border-radius: 6px;
-      border: 1px solid rgba(0, 240, 255, 0.4);
-      box-shadow: 0 3px 0px rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(0, 245, 255, 0.45);
+      box-shadow: 0 3px 0px rgba(0, 0, 0, 0.9);
     }
 
-    /* ⏳ YÜKLENİYOR EKRANI (TAM EKRAN NEON PROGRESS) */
-    .loading-overlay {
+    /* ⏳ Modern Yükleme Ekranı (Progress & Alıntı) */
+    .loading-curtain {
       position: absolute;
       inset: 0;
-      background: rgba(9, 3, 20, 0.95);
-      backdrop-filter: blur(25px);
+      background: rgba(7, 3, 18, 0.94);
+      backdrop-filter: blur(28px);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 50;
-      transition: opacity 0.5s ease;
+      z-index: 60;
     }
 
-    .spinner-ring {
-      width: 70px;
-      height: 70px;
-      border: 4px solid rgba(255, 0, 127, 0.15);
-      border-top: 4px solid var(--neon-pink);
-      border-right: 4px solid var(--neon-cyan);
+    .dual-spinner {
+      width: 76px;
+      height: 76px;
+      border: 4px solid rgba(255, 19, 121, 0.15);
+      border-top: 4px solid var(--pink);
+      border-right: 4px solid var(--cyan);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 25px;
-      box-shadow: 0 0 30px rgba(255, 0, 127, 0.4);
+      animation: spin-loop 0.8s linear infinite;
+      margin-bottom: 26px;
+      box-shadow: 0 0 35px rgba(255, 19, 121, 0.45);
     }
 
-    @keyframes spin {
+    @keyframes spin-loop {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
 
-    .loading-text {
+    .loading-head {
       font-family: 'Righteous', cursive;
-      font-size: 22px;
-      letter-spacing: 1px;
+      font-size: 24px;
+      letter-spacing: 1.5px;
       color: #fff;
-      text-shadow: 0 0 15px var(--neon-pink);
+      text-shadow: 0 0 16px var(--pink);
     }
 
-    .loading-tip {
+    .loading-sub {
+      margin-top: 10px;
       font-size: 14px;
-      color: var(--neon-cyan);
-      margin-top: 8px;
+      color: var(--cyan);
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Mobil Uyumluluk */
+    /* Save Bilgilendirme Modalı */
+    .save-modal {
+      border: 1px solid var(--card-border);
+      background: rgba(15, 7, 30, 0.96);
+      color: #fff;
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 480px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 0 50px rgba(0,0,0,0.8), 0 0 30px rgba(255, 19, 121, 0.3);
+    }
+
+    .save-modal::backdrop {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+    }
+
+    .save-modal h3 {
+      font-family: 'Righteous', cursive;
+      font-size: 22px;
+      color: var(--pink);
+      margin: 0 0 14px 0;
+    }
+
+    .save-modal p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #d1c5e3;
+      margin: 0 0 16px 0;
+    }
+
+    .close-modal-btn {
+      padding: 10px 24px;
+      border-radius: 30px;
+      background: var(--pink);
+      color: #fff;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     @media (max-width: 768px) {
-      .feature-cards { flex-direction: column; align-items: center; }
-      .f-card { max-width: 100%; width: 90%; }
-      .controls-bar { flex-wrap: wrap; justify-content: center; border-radius: 16px; gap: 12px; }
-      .retro-sun { width: 180px; height: 180px; }
+      .cards-row { flex-direction: column; align-items: center; }
+      .info-card { max-width: 100%; width: 92%; }
+      .controls-strip { flex-wrap: wrap; justify-content: center; gap: 10px; border-radius: 18px; }
+      .sunset-glow { width: 170px; height: 170px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Oyun Ekranı -->
+  <!-- Oyun Penceresi -->
   <canvas id="canvas" width="1280" height="720" tabindex="0" aria-label="Vice City"></canvas>
   <div id="fps" hidden>FPS —</div>
 
-  <!-- 🌴 RETRO SYNTHWAVE KARŞILAMA VE GİRİŞ EKRANI -->
-  <section id="gate" class="synth-stage">
+  <!-- 🌴 GİRİŞ VE KARŞILAMA SAHNESİ -->
+  <section id="gate" class="viewport-overlay">
     
-    <!-- Gökyüzü ve Arka Plan Efektleri -->
-    <div class="retro-sun"></div>
-    <div class="synth-grid"></div>
-    <div class="palms-deco"></div>
+    <!-- Synthwave Görsel Efektleri -->
+    <div class="sunset-glow"></div>
+    <div class="retro-grid"></div>
+    <div class="palms-bg"></div>
 
-    <!-- Üst Rozet -->
-    <div class="top-badge">
-      <span class="pulse-dot"></span>
-      1986 MIAMI · WEBASSEMBLY 64-BIT EDİSYONU
-    </div>
+    <!-- Üst Çubuk -->
+    <header class="top-bar">
+      <div class="badge-capsule">
+        <span class="live-dot"></span>
+        VICE CITY WEB · TÜRKÇE SÜRÜM
+      </div>
 
-    <!-- Ana Başlık ve Logo -->
-    <div class="hero-content">
-      <div class="title-subtext">GRAND THEFT AUTO</div>
-      <h1 class="vice-city-logo">VICE CITY</h1>
-      <p class="hero-desc">
-        Tommy Vercetti'nin efsanevi macerası artık doğrudan tarayıcında. 
-        Kurulum yok, dosya indirmek yok, saf nostalji.
+      <div class="quick-actions">
+        <button id="save-info-btn" class="glass-btn-sm" type="button">
+          💾 Kayıt Nasıl Yapılır?
+        </button>
+        <button id="fullscreen-btn" class="glass-btn-sm" type="button">
+          ⛶ Tam Ekran
+        </button>
+      </div>
+    </header>
+
+    <!-- Ana Logo & Başlık -->
+    <div class="main-hero">
+      <div class="grand-title">GRAND THEFT AUTO</div>
+      <h1 class="vice-logo">VICE CITY</h1>
+      <p class="hero-tagline">
+        Nostaljiye tek tıkla geri dön. Dosya indirmek yok, kurulum yok; 
+        doğrudan tarayıcında aç ve oyna.
       </p>
 
-      <!-- Başlat Butonu -->
-      <div class="cta-area">
-        <button id="play" class="cyber-btn" autofocus>
-          🌴 OYUNU BAŞLAT
+      <!-- Dev Oyna Butonu -->
+      <div class="action-container">
+        <button id="play" class="play-trigger" autofocus>
+          🎮 OYUNU BAŞLAT
         </button>
-        <p id="status" class="status-msg" role="status"></p>
-        <button id="retry" class="cyber-btn" style="background:#ff3333;margin-top:10px;" hidden>Tekrar Dene</button>
+        <p id="status" class="status-alert" role="status"></p>
+        <button id="retry" class="play-trigger" style="background:#e52020;margin-top:12px;display:none;" hidden>Tekrar Dene</button>
       </div>
     </div>
 
-    <!-- 3'lü Özellik Kartları -->
-    <div class="feature-cards">
-      <div class="f-card">
-        <div class="f-icon">⚡</div>
-        <div class="f-title">Saf WebAssembly</div>
-        <div class="f-desc">C++ motorundan doğrudan tarayıcıya 60 FPS akıcı donanım performansı.</div>
+    <!-- 3'lü Sade Özellik Kartları -->
+    <div class="cards-row">
+      <div class="info-card">
+        <div class="card-icon">🚀</div>
+        <div class="card-heading">İndirmeden Tıkla Oyna</div>
+        <div class="card-text">Tek bir megabayt bile yüklemeden saniyeler içinde Tommy Vercetti ile sokaklardasın.</div>
       </div>
-      <div class="f-card">
-        <div class="f-icon">🎧</div>
-        <div class="f-title">Flash FM & Radyolar</div>
-        <div class="f-desc">Michael Jackson, Hall & Oates ve tüm 80'ler efsaneleri canlı akışta.</div>
+
+      <div class="info-card">
+        <div class="card-icon">💾</div>
+        <div class="card-heading">Kalıcı Otomatik Kayıt</div>
+        <div class="card-text">Oteldeki pembe kasetten oyunu kaydet; tarayıcını kapatsan dahi ilerlemen silinmez.</div>
       </div>
-      <div class="f-card">
-        <div class="f-icon">💾</div>
-        <div class="f-title">Kalıcı Save Sistemi</div>
-        <div class="f-desc">Hotel Ocean View'da oyunu kaydet, tarayıcıyı kapatsan bile ilerlemen kaybolmaz.</div>
+
+      <div class="info-card">
+        <div class="card-icon">📻</div>
+        <div class="card-heading">Tüm Orijinal Radyolar</div>
+        <div class="card-text">Flash FM, Wave 103, V-Rock ve efsanevi 80'ler şarkıları kesintisiz seninle.</div>
       </div>
     </div>
 
-    <!-- Tuş Kontrolleri -->
-    <div class="controls-bar">
-      <div class="key-group">
+    <!-- Kontroller -->
+    <footer class="controls-strip">
+      <div class="ctrl-item">
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
-        <span>Hareket</span>
+        <span>Yürüme / Sürüş</span>
       </div>
-      <div class="key-group">
+      <div class="ctrl-item">
         <kbd>F</kbd> / <kbd>Enter</kbd>
         <span>Araca Bin</span>
       </div>
-      <div class="key-group">
+      <div class="ctrl-item">
         <kbd>Boşluk</kbd>
         <span>El Freni / Zıpla</span>
       </div>
-      <div class="key-group">
+      <div class="ctrl-item">
         <kbd>Esc</kbd>
-        <span>Menü</span>
+        <span>Oyun Menüsü</span>
       </div>
-    </div>
+    </footer>
 
   </section>
 
-  <!-- Yükleme Göstergesi -->
-  <div id="loading-box" class="loading-overlay" hidden>
-    <div class="spinner-ring"></div>
-    <div class="loading-text" id="loading-status-text">Vice City Hazırlanıyor...</div>
-    <div class="loading-tip">"Tommy Vercetti... Huh! Shit. Didn't think they'd ever let him out."</div>
+  <!-- Yükleniyor Ekranı -->
+  <div id="loading-curtain" class="loading-curtain" hidden>
+    <div class="dual-spinner"></div>
+    <div class="loading-head" id="loading-display-text">Vice City Açılıyor...</div>
+    <div class="loading-sub">"Tommy Vercetti... Huh! Shit. Didn't think they'd ever let him out."</div>
     <p id="loading" hidden></p>
   </div>
 
-  <!-- Motor Yardımcı Dialogları -->
+  <!-- Save Bilgi Modalı -->
+  <dialog id="save-help-dialog" class="save-modal">
+    <h3>💾 İlerlemen Nasıl Kaydedilir?</h3>
+    <p>
+      Vice City'de ilerlemeni kaydetmek için haritadaki <strong>pembe kaset simgelerine</strong> (Örn: Ocean View Oteli) git ve bir kayıt yuvası seç.
+    </p>
+    <p>
+      Kayıtların doğrudan kullandığın bu tarayıcının güvenli hafızasında saklanır. Siteye tekrar girdiğinde oyunun ana menüsünden <strong>"Load Game" (Kayıtlı Oyunu Yükle)</strong> diyerek kaldığın yerden devam edebilirsin!
+    </p>
+    <button id="close-modal-btn" class="close-modal-btn" type="button">Tamam, Anladım</button>
+  </dialog>
+
+  <!-- Motor İçin Gizli Elementler -->
   <dialog id="save-help" hidden></dialog>
   <button id="save-help-open" hidden></button>
   <button id="save-help-close" hidden></button>
@@ -537,22 +628,44 @@
   <p id="save-storage-status" hidden></p>
 
   <script>
-    // Girişten Yüklemeye Geçiş Animasyonu
-    const playBtn = document.querySelector('#play');
-    const loadingBox = document.querySelector('#loading-box');
-    const loadingLabel = document.querySelector('#loading-status-text');
-    const observer = new MutationObserver(() => {
-      const origLoading = document.querySelector('#loading');
-      if (origLoading && !origLoading.hidden) {
-        loadingBox.hidden = false;
-        if (origLoading.textContent) {
-          loadingLabel.textContent = origLoading.textContent.replace('Preparando', 'Hazırlanıyor');
-        }
+    // Tam Ekran Butonu
+    document.querySelector('#fullscreen-btn').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
       } else {
-        loadingBox.hidden = true;
+        document.exitFullscreen().catch(() => {});
       }
     });
-    observer.observe(document.querySelector('#loading'), { attributes: true, childList: true, characterData: true });
+
+    // Kayıt Bilgilendirme Modalı
+    const saveModal = document.querySelector('#save-help-dialog');
+    document.querySelector('#save-info-btn').addEventListener('click', () => saveModal.showModal());
+    document.querySelector('#close-modal-btn').addEventListener('click', () => saveModal.close());
+
+    // Tarayıcı Kalıcı Hafıza İzni (Otomatik Arka Planda Alınır)
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          await navigator.storage.persist();
+        }
+      } catch (e) {}
+    });
+
+    // Yükleme Takibi
+    const loadingCurtain = document.querySelector('#loading-curtain');
+    const loadingDisplayText = document.querySelector('#loading-display-text');
+    const obs = new MutationObserver(() => {
+      const origLoading = document.querySelector('#loading');
+      if (origLoading && !origLoading.hidden) {
+        loadingCurtain.hidden = false;
+        if (origLoading.textContent) {
+          loadingDisplayText.textContent = origLoading.textContent.replace('Preparando', 'Yükleniyor').replace('Vice City', 'Vice City');
+        }
+      } else {
+        loadingCurtain.hidden = true;
+      }
+    });
+    obs.observe(document.querySelector('#loading'), { attributes: true, childList: true, characterData: true });
   </script>
 
   <script type="module" src="/play/entry.js"></script>
