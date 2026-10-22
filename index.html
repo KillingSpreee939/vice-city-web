@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/play/play.css">
 
   <style>
     :root {
@@ -18,16 +17,16 @@
       --purple: #8b00ff;
       --gold: #ffbe00;
       --bg: #070312;
-      --card-bg: rgba(18, 10, 36, 0.72);
-      --card-border: rgba(255, 19, 121, 0.25);
+      --card-bg: rgba(18, 10, 36, 0.82);
+      --card-border: rgba(255, 19, 121, 0.35);
     }
 
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      background: var(--bg);
+      background: #070312 !important;
       color: #fff;
       font-family: 'Plus Jakarta Sans', sans-serif;
       overflow: hidden;
@@ -38,13 +37,15 @@
 
     /* 🎮 Canvas Oyun Alanı */
     #canvas {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      display: block;
+      position: fixed !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
       background: #000;
-      box-shadow: 0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(255, 19, 121, 0.2);
+      box-shadow: 0 0 100px rgba(0,0,0,0.95), 0 0 40px rgba(255, 19, 121, 0.25);
       border-radius: 6px;
+      z-index: 1;
     }
 
     #fps {
@@ -55,49 +56,52 @@
       font-size: 13px;
       font-weight: 700;
       color: #00ffaa;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       padding: 5px 12px;
       border-radius: 30px;
-      border: 1px solid rgba(0, 255, 170, 0.3);
+      border: 1px solid rgba(0, 255, 170, 0.4);
       z-index: 100;
       backdrop-filter: blur(8px);
     }
 
-    /* 🌆 ULTRA MODERN RETRO-FUTURISTIC SAHNE */
-    .viewport-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: 30px 24px;
-      z-index: 10;
+    /* 🌆 MERKEZİ SYNTHWAVE KARŞILAMA SAHNESİ */
+    #gate {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 30px 24px !important;
       background: 
-        radial-gradient(circle at 50% 15%, rgba(139, 0, 255, 0.28) 0%, transparent 60%),
-        radial-gradient(circle at 80% 80%, rgba(255, 19, 121, 0.15) 0%, transparent 50%),
-        linear-gradient(180deg, #0d061c 0%, var(--bg) 100%);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+        radial-gradient(circle at 50% 18%, rgba(139, 0, 255, 0.4) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(255, 19, 121, 0.25) 0%, transparent 50%),
+        linear-gradient(180deg, #0e051f 0%, #070312 100%) !important;
+      z-index: 10 !important;
+      margin: 0 !important;
       overflow: hidden;
+      transition: opacity 0.6s ease;
     }
 
-    /* Hareketli Synthwave Taban Izgarası */
+    /* 3D Hareketli Neon Izgara */
     .retro-grid {
       position: absolute;
       bottom: -40px;
       left: -50%;
       width: 200%;
-      height: 50%;
+      height: 48%;
       background-image: 
-        linear-gradient(to bottom, rgba(7, 3, 18, 0.1), #070312 90%),
-        linear-gradient(rgba(255, 19, 121, 0.3) 2px, transparent 2px),
-        linear-gradient(90deg, rgba(0, 245, 255, 0.3) 2px, transparent 2px);
+        linear-gradient(to bottom, rgba(7, 3, 18, 0.1), #070312 92%),
+        linear-gradient(rgba(255, 19, 121, 0.35) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(0, 245, 255, 0.35) 2px, transparent 2px);
       background-size: 100% 100%, 64px 64px, 64px 64px;
       transform: perspective(280px) rotateX(68deg);
       animation: grid-roll 2.8s linear infinite;
       pointer-events: none;
       z-index: 1;
-      opacity: 0.75;
+      opacity: 0.8;
     }
 
     @keyframes grid-roll {
@@ -105,20 +109,20 @@
       100% { background-position: 0 0, 0 64px, 0 0; }
     }
 
-    /* Batan Neon Güneş */
+    /* Batan Neon Güneş (Tam Ortada) */
     .sunset-glow {
       position: absolute;
-      top: 10%;
+      top: 8%;
       left: 50%;
       transform: translateX(-50%);
-      width: 240px;
-      height: 240px;
+      width: 250px;
+      height: 250px;
       border-radius: 50%;
       background: linear-gradient(180deg, #ffe600 0%, #ff5e00 45%, #ff007f 100%);
-      box-shadow: 0 0 90px rgba(255, 94, 0, 0.5), 0 0 160px rgba(255, 0, 127, 0.4);
+      box-shadow: 0 0 90px rgba(255, 94, 0, 0.6), 0 0 160px rgba(255, 0, 127, 0.5);
       pointer-events: none;
       z-index: 1;
-      opacity: 0.8;
+      opacity: 0.85;
       -webkit-mask-image: linear-gradient(to bottom, 
         black 0%, black 52%, 
         transparent 52%, transparent 56%, 
@@ -143,7 +147,7 @@
       100% { transform: translateX(-50%) scale(1.02); filter: drop-shadow(0 0 45px rgba(255, 0, 127, 0.8)); }
     }
 
-    /* Palmiye Silüet Katmanı */
+    /* Palmiye Silüetleri */
     .palms-bg {
       position: absolute;
       bottom: 0;
@@ -151,13 +155,13 @@
       width: 100%;
       height: 380px;
       background: url('https://gta.rabisco.net/assets/play/268ff48be4e874becefc3a56bb83114df7d32a48d0f9c59ccfa2dda9f09dae29.webp') bottom center / cover no-repeat;
-      opacity: 0.28;
+      opacity: 0.3;
       pointer-events: none;
       z-index: 2;
       filter: saturate(1.6);
     }
 
-    /* 👑 Üst Navigasyon & Rozet */
+    /* 👑 Üst Bar (Ortalı ve Hizalı) */
     .top-bar {
       width: 100%;
       max-width: 1100px;
@@ -165,6 +169,7 @@
       align-items: center;
       justify-content: space-between;
       z-index: 5;
+      margin: 0 auto;
     }
 
     .badge-capsule {
@@ -172,14 +177,14 @@
       align-items: center;
       gap: 10px;
       padding: 7px 18px;
-      background: rgba(255, 19, 121, 0.12);
-      border: 1px solid rgba(255, 19, 121, 0.35);
+      background: rgba(255, 19, 121, 0.15);
+      border: 1px solid rgba(255, 19, 121, 0.4);
       border-radius: 40px;
       font-size: 13px;
       font-weight: 700;
       letter-spacing: 1.5px;
       color: var(--cyan);
-      box-shadow: 0 0 20px rgba(255, 19, 121, 0.15);
+      box-shadow: 0 0 20px rgba(255, 19, 121, 0.2);
       backdrop-filter: blur(10px);
     }
 
@@ -203,9 +208,9 @@
     }
 
     .glass-btn-sm {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 8px 18px;
       border-radius: 20px;
       color: #fff;
       font-size: 13px;
@@ -219,19 +224,22 @@
     }
 
     .glass-btn-sm:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.2);
       border-color: var(--cyan);
       transform: translateY(-2px);
     }
 
-    /* 🌴 Ana Karşılama Alanı (Hero) */
+    /* 🌴 Ana Karşılama Alanı (Hero - Kesinlikle Ortada) */
     .main-hero {
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       text-align: center;
       z-index: 5;
-      margin-top: 10px;
+      margin: 0 auto;
+      max-width: 800px;
+      width: 100%;
     }
 
     .grand-title {
@@ -240,7 +248,7 @@
       letter-spacing: 9px;
       text-transform: uppercase;
       color: #ffffff;
-      text-shadow: 0 0 12px var(--cyan);
+      text-shadow: 0 0 14px var(--cyan);
       margin-bottom: 2px;
     }
 
@@ -248,23 +256,26 @@
       font-family: 'Righteous', cursive;
       font-size: clamp(54px, 8.5vw, 98px);
       line-height: 0.95;
-      margin: 0;
+      margin: 0 auto;
       background: linear-gradient(180deg, #ffffff 0%, #ffdef0 40%, var(--pink) 75%, #770038 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       filter: drop-shadow(4px 4px 0px var(--cyan)) drop-shadow(0 0 35px rgba(255, 19, 121, 0.8));
       transform: skew(-7deg) rotate(-2deg);
       letter-spacing: 1px;
+      display: block;
+      text-align: center;
     }
 
     .hero-tagline {
-      margin-top: 18px;
+      margin: 18px auto 0 auto;
       font-size: 18px;
       font-weight: 400;
       color: #e4ddf3;
       max-width: 560px;
       line-height: 1.5;
       text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      text-align: center;
     }
 
     /* 🎮 Dev "OYUNU BAŞLAT" Butonu */
@@ -273,6 +284,8 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
+      width: 100%;
       z-index: 5;
     }
 
@@ -289,7 +302,7 @@
       border: none;
       border-radius: 60px;
       cursor: pointer;
-      box-shadow: 0 0 40px rgba(255, 19, 121, 0.75), 0 0 80px rgba(139, 0, 255, 0.4);
+      box-shadow: 0 0 45px rgba(255, 19, 121, 0.8), 0 0 90px rgba(139, 0, 255, 0.45);
       transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       animation: btn-glow 4s ease infinite;
       overflow: hidden;
@@ -303,7 +316,7 @@
 
     .play-trigger:hover {
       transform: translateY(-4px) scale(1.05);
-      box-shadow: 0 0 55px rgba(255, 19, 121, 0.95), 0 0 110px rgba(0, 245, 255, 0.7);
+      box-shadow: 0 0 60px rgba(255, 19, 121, 1), 0 0 120px rgba(0, 245, 255, 0.8);
     }
 
     .play-trigger:active {
@@ -330,9 +343,10 @@
       color: var(--cyan);
       min-height: 22px;
       text-shadow: 0 0 8px rgba(0, 245, 255, 0.6);
+      text-align: center;
     }
 
-    /* 💎 3'lü Efsane Özellik Kartları (Sade & Anlaşılır) */
+    /* 💎 3'lü Efsane Özellik Kartları (Ortada) */
     .cards-row {
       display: flex;
       gap: 16px;
@@ -340,7 +354,7 @@
       width: 100%;
       justify-content: center;
       z-index: 5;
-      margin-top: 15px;
+      margin: 15px auto 0 auto;
     }
 
     .info-card {
@@ -351,7 +365,7 @@
       border-radius: 18px;
       padding: 18px;
       backdrop-filter: blur(16px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       transition: all 0.3s ease;
       text-align: left;
     }
@@ -359,7 +373,7 @@
     .info-card:hover {
       transform: translateY(-5px);
       border-color: var(--cyan);
-      box-shadow: 0 14px 35px rgba(0, 245, 255, 0.25);
+      box-shadow: 0 14px 35px rgba(0, 245, 255, 0.3);
     }
 
     .card-icon {
@@ -380,19 +394,21 @@
       line-height: 1.45;
     }
 
-    /* 🕹️ Klavye Kontrolleri Çubuğu */
+    /* 🕹️ Klavye Kontrolleri Çubuğu (Ortada) */
     .controls-strip {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 22px;
-      background: rgba(12, 6, 24, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(12, 6, 24, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       padding: 10px 24px;
       border-radius: 40px;
       backdrop-filter: blur(12px);
       z-index: 5;
       font-size: 13px;
       color: #e0d8ef;
+      margin: 0 auto;
     }
 
     .ctrl-item {
@@ -409,15 +425,15 @@
       color: var(--cyan);
       padding: 4px 9px;
       border-radius: 6px;
-      border: 1px solid rgba(0, 245, 255, 0.45);
+      border: 1px solid rgba(0, 245, 255, 0.5);
       box-shadow: 0 3px 0px rgba(0, 0, 0, 0.9);
     }
 
-    /* ⏳ Modern Yükleme Ekranı (Progress & Alıntı) */
+    /* ⏳ Yükleme Ekranı */
     .loading-curtain {
       position: absolute;
       inset: 0;
-      background: rgba(7, 3, 18, 0.94);
+      background: rgba(7, 3, 18, 0.96);
       backdrop-filter: blur(28px);
       display: flex;
       flex-direction: column;
@@ -435,7 +451,7 @@
       border-radius: 50%;
       animation: spin-loop 0.8s linear infinite;
       margin-bottom: 26px;
-      box-shadow: 0 0 35px rgba(255, 19, 121, 0.45);
+      box-shadow: 0 0 35px rgba(255, 19, 121, 0.5);
     }
 
     @keyframes spin-loop {
@@ -458,21 +474,21 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Save Bilgilendirme Modalı */
+    /* Modal */
     .save-modal {
       border: 1px solid var(--card-border);
-      background: rgba(15, 7, 30, 0.96);
+      background: rgba(15, 7, 30, 0.98);
       color: #fff;
       border-radius: 20px;
       padding: 28px;
       max-width: 480px;
       backdrop-filter: blur(20px);
-      box-shadow: 0 0 50px rgba(0,0,0,0.8), 0 0 30px rgba(255, 19, 121, 0.3);
+      box-shadow: 0 0 50px rgba(0,0,0,0.9), 0 0 30px rgba(255, 19, 121, 0.4);
     }
 
     .save-modal::backdrop {
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
     }
 
     .save-modal h3 {
@@ -513,10 +529,10 @@
   <canvas id="canvas" width="1280" height="720" tabindex="0" aria-label="Vice City"></canvas>
   <div id="fps" hidden>FPS —</div>
 
-  <!-- 🌴 GİRİŞ VE KARŞILAMA SAHNESİ -->
-  <section id="gate" class="viewport-overlay">
+  <!-- 🌴 MERKEZİ SAHNE -->
+  <section id="gate">
     
-    <!-- Synthwave Görsel Efektleri -->
+    <!-- Arka Plan Görselleri -->
     <div class="sunset-glow"></div>
     <div class="retro-grid"></div>
     <div class="palms-bg"></div>
@@ -538,7 +554,7 @@
       </div>
     </header>
 
-    <!-- Ana Logo & Başlık -->
+    <!-- Ana Başlık ve Buton (Tam Ortada) -->
     <div class="main-hero">
       <div class="grand-title">GRAND THEFT AUTO</div>
       <h1 class="vice-logo">VICE CITY</h1>
@@ -547,7 +563,7 @@
         doğrudan tarayıcında aç ve oyna.
       </p>
 
-      <!-- Dev Oyna Butonu -->
+      <!-- Buton ve Durum Metni -->
       <div class="action-container">
         <button id="play" class="play-trigger" autofocus>
           🎮 OYUNU BAŞLAT
@@ -557,7 +573,7 @@
       </div>
     </div>
 
-    <!-- 3'lü Sade Özellik Kartları -->
+    <!-- 3'lü Kartlar (Tam Ortada) -->
     <div class="cards-row">
       <div class="info-card">
         <div class="card-icon">🚀</div>
@@ -578,7 +594,7 @@
       </div>
     </div>
 
-    <!-- Kontroller -->
+    <!-- Kontroller (Tam Ortada) -->
     <footer class="controls-strip">
       <div class="ctrl-item">
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
@@ -642,7 +658,7 @@
     document.querySelector('#save-info-btn').addEventListener('click', () => saveModal.showModal());
     document.querySelector('#close-modal-btn').addEventListener('click', () => saveModal.close());
 
-    // Tarayıcı Kalıcı Hafıza İzni (Otomatik Arka Planda Alınır)
+    // Tarayıcı Kalıcı Hafıza İzni
     window.addEventListener('DOMContentLoaded', async () => {
       try {
         if (navigator.storage && navigator.storage.persist) {

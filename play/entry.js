@@ -6,23 +6,28 @@ document.querySelector('#save-protect').addEventListener('click',async()=>{
   const status=document.querySelector('#save-storage-status');
   try{
     const protectedStorage=await navigator.storage?.persist?.();
-    status.textContent=protectedStorage?'Armazenamento protegido contra limpeza automática. Apagar os dados do site ainda remove os saves.':'O navegador não concedeu proteção extra. Os saves continuam locais; evite limpar os dados do site.';
+    status.textContent=protectedStorage?'Kayıtlar tarayıcı hafızasında kalıcı olarak koruma altına alındı.':'Tarayıcı ekstra koruma vermedi ama kayıtlar yerel olarak saklanmaya devam ediyor.';
   }catch{
-    status.textContent='Proteção extra indisponível neste navegador. Os saves continuam locais; evite limpar os dados do site.';
+    status.textContent='Kayıtlar yerel hafızada saklanıyor.';
   }
 });
+
 play.addEventListener('click',async()=>{
   play.disabled=true;
-  document.querySelector('#status').textContent='Preparando Vice City…';
+  document.querySelector('#status').textContent='Vice City hazırlanıyor…';
   try{
     await import('./classic.js');
     play.disabled=false;
     play.click();
-  }catch{
-    document.querySelector('#status').textContent='Falha ao carregar o jogo. Recarregue para tentar novamente.';
+  }catch(err){
+    console.error('Oyun yükleme hatası:', err);
+    document.querySelector('#status').textContent='Oyun yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.';
     play.hidden=true;
     const retry=document.querySelector('#retry');
-    retry.hidden=false;
-    retry.addEventListener('click',()=>location.reload(),{once:true});
+    if (retry) {
+      retry.hidden=false;
+      retry.style.display='inline-block';
+      retry.addEventListener('click',()=>location.reload(),{once:true});
+    }
   }
 },{once:true});
