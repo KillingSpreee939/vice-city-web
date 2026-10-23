@@ -24,8 +24,16 @@
       "destination": "https://gta.rabisco.net/assets/classic/game/:match*"
     },
     {
+      "source": "/assets/classic/transport/:match*",
+      "destination": "https://gta.rabisco.net/assets/classic/transport/:match*"
+    },
+    {
       "source": "/assets/classic/localization/:match*",
       "destination": "https://gta.rabisco.net/assets/classic/localization/:match*"
+    },
+    {
+      "source": "/assets/play/:match*",
+      "destination": "https://gta.rabisco.net/assets/play/:match*"
     }
   ]
 }
