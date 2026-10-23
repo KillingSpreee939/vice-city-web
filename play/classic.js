@@ -398,6 +398,11 @@ async function install(instance) {
       if (ready < 0) throw new Error('Sons do menu indisponíveis.');
       await new Promise(resolve => setTimeout(resolve,5));
     }
+    // Pre-warm initial cutscene assets and models in the background to prevent intro stuttering
+    try {
+      void streamer.ensure('cuts.img', 0, 4 * 1024 * 1024);
+      void streamer.ensure('gta3.img', 0, 8 * 1024 * 1024);
+    } catch (_) {}
   }
   if (viewer) {
     const recipe = FS.readFile('/gtavc/data/gta_vc.dat',{encoding:'utf8'}).split(/\r?\n/).filter(line=>/^(IDE|COLFILE)\s/.test(line)).join('\n')+'\n';

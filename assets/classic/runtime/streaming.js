@@ -17,11 +17,10 @@
 // 4 MiB chunks meant a 1 KiB read cost 4 MiB and only 48 blocks fitted the cache, so a map load
 // thrashed and pulled ~35 GB over ~9000 requests. Smaller blocks, far more of them cached.
 const CHUNK_SIZE = 256 * 1024;
-// 400 MB, deliberately well under the renderer's comfort zone: the engine's own wasm heap rides
-// in the same process, and a JS-side gigabyte tips the tab into a GC spiral (black canvas).
-const CACHE_LIMIT = 400 * 1024 * 1024;
-const READAHEAD = 8;  // chunks pulled per sequential miss
-const READAHEAD_RUN = 32; // once a run is established, pull much more per round trip
+// 512 MB cache limit for smooth map and audio streaming
+const CACHE_LIMIT = 512 * 1024 * 1024;
+const READAHEAD = 16;  // 16 chunks (4MB) pulled per sequential miss
+const READAHEAD_RUN = 48; // once a run is established, pull 12MB per round trip
 
 export { CHUNK_SIZE, CACHE_LIMIT, READAHEAD, READAHEAD_RUN };
 
@@ -189,8 +188,8 @@ export class ArchiveStreamer {
     // No reporting from here: this runs inside the engine's synchronous read, and touching the DOM
     // per chunk stalled the boot.
     this.run = sequential ? this.run + 1 : 0;
-    // A long sequential run means a map load walking an archive: pull much more per round trip.
-    const chunks = sequential ? (this.run > 2 ? READAHEAD_RUN : READAHEAD) : 1;
+    // For non-sequential reads, pull at least 4 chunks (1MB) so that full 3D models and cutscene assets don't stutter
+    const chunks = sequential ? (this.run > 2 ? READAHEAD_RUN : READAHEAD) : 4;
     const span = this.fetchChunkSync(url, index, file, chunks, size);
     this.nextIndex.set(url, index + span.length / CHUNK_SIZE);
     for (let offset = 0; offset < span.length; offset += CHUNK_SIZE) {
@@ -280,9 +279,8 @@ export class ArchiveStreamer {
   /** Queue a chunk for the background warmer without blocking the caller. */
           schedule(entry              , index        , chunks = READAHEAD)       {
     const key = `${entry.url}#${index}`;
-    // Cap in-flight background reads: firing one per miss opened hundreds of sockets and the server
-    // started refusing connections.
-    if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 8) return;
+    // Cap in-flight background reads to 24 concurrent requests for smoother high-bandwidth asset loading
+    if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 24) return;
     const request = {superseded:false};
     this.pending.set(key, request);
     const start = index * CHUNK_SIZE;
