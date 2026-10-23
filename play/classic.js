@@ -119,6 +119,37 @@ function failed(error) {
   gate.hidden = false;play.hidden = true;retry.hidden = false;loading.hidden = true;
   status.textContent = 'Não foi possível abrir o jogo. Recarregue para tentar novamente.';
 }
+function warmInitialCutscenesAndAudio(streamer) {
+  if (viewer) return;
+  // 1. Pre-warm ALL intro cutscene audio tracks (Marco's Bistro, Airport, Dock Deal, Hotel Escape)
+  for (const name of ['int_m.mp3', 'int_a.mp3', 'int_d.mp3', 'int_b.mp3']) {
+    const entry = streamer.byName.get(name);
+    if (entry) {
+      const total = Math.ceil(entry.size / (256 * 1024));
+      streamer.warmRange(entry, 0, total - 1, 4);
+    }
+  }
+  // 2. Pre-warm entire intro cutscene sequence in anim/cuts.img (chunks 246 to 282)
+  const cuts = streamer.byName.get('cuts.img');
+  if (cuts) {
+    streamer.warmRange(cuts, 246, 282, 4);
+  }
+  // 3. Pre-warm ALL cutscene character & vehicle models from models/gta3.img (chunks 0 to 180)
+  const gta3 = streamer.byName.get('gta3.img');
+  if (gta3) {
+    streamer.warmRange(gta3, 0, 180, 4);
+  }
+}
+
+function warmSecondaryAssets(streamer) {
+  if (viewer) return;
+  // Continue pre-warming Ocean Beach and vehicle models while user is on main menu
+  const gta3 = streamer.byName.get('gta3.img');
+  if (gta3) {
+    streamer.warmRange(gta3, 181, 260, 4);
+  }
+}
+
 retry.onclick = () => location.reload();
 const streamer = new ArchiveStreamer(message => {failed(message);throw new Error(message);}, failed);
 window.viceClassic = {viewer:{
@@ -309,6 +340,7 @@ async function install(instance) {
       loading.textContent = `Vice City Hazırlanıyor · ${Math.round(100*loaded/count)}%`;
     } else jobs.push({file,path,url});
   }
+  warmInitialCutscenesAndAudio(streamer);
   const supplementResponse = await fetch('/assets/classic/engine/texture-supplements.json');
   if (!supplementResponse.ok) throw new Error('Manifesto de texturas indisponível.');
   const supplementData = new Uint8Array(await supplementResponse.arrayBuffer());
@@ -407,32 +439,6 @@ async function install(instance) {
   FS.chdir('/gtavc');
 }
 
-function warmInitialCutscenesAndAudio(streamer) {
-  if (viewer) return;
-  // Pre-warm intro cutscene sequence (Sonny Forelli, Airport, Dock deal, Hotel escape) in anim/cuts.img
-  const cuts = streamer.byName.get('cuts.img');
-  if (cuts) {
-    for (let i = 246; i <= 280; i += 4) {
-      streamer.schedule(cuts, i, Math.min(4, 281 - i));
-    }
-  }
-  // Pre-warm initial world models and character models from models/gta3.img
-  const gta3 = streamer.byName.get('gta3.img');
-  if (gta3) {
-    for (let i = 0; i < 32; i += 4) {
-      streamer.schedule(gta3, i, 4);
-    }
-  }
-  // Pre-warm intro car escape audio
-  const intB = streamer.byName.get('int_b.mp3');
-  if (intB) {
-    const totalChunks = Math.ceil(intB.size / (256 * 1024));
-    for (let i = 0; i < totalChunks; i += 4) {
-      streamer.schedule(intB, i, Math.min(4, totalChunks - i));
-    }
-  }
-}
-
 play.addEventListener('click',async () => {
   if (started) return;
   started = true;
@@ -453,7 +459,7 @@ play.addEventListener('click',async () => {
         instance.addRunDependency('vice-assets');
         void install(instance).then(() => instance.removeRunDependency('vice-assets')).catch(failed);
       }],
-      onRuntimeInitialized(){native = this;phase = 'running';loading.hidden = true;canvas.focus();warmInitialCutscenesAndAudio(streamer);},
+      onRuntimeInitialized(){native = this;phase = 'running';loading.hidden = true;canvas.focus();warmSecondaryAssets(streamer);},
       onAbort:failed,
     }).catch(failed);
   } catch(error) {failed(error);}

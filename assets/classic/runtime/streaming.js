@@ -48,6 +48,7 @@ export class ArchiveStreamer {
 
   transport = new Map();
   workerRequests = new Map();
+  inFlightRequests = 0;
   requestId = 0;
   workerFailed = false;
   // WebKit worker networking waits for the page to yield; its native synchronous miss cannot spin-wait on it.
@@ -280,12 +281,13 @@ export class ArchiveStreamer {
   /** Queue chunks for background download without blocking the caller. */
           schedule(entry              , index        , chunks = READAHEAD)       {
     const key = `${entry.url}#${index}`;
-    // Cap in-flight background reads to 32 concurrent requests
-    if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 32) return;
+    // Check if first chunk is already cached or pending, or if concurrent network connections limit (24) is reached
+    if (this.cache.has(key) || this.pending.has(key) || this.inFlightRequests >= 24) return;
     const request = {superseded:false};
     for (let c = 0; c < chunks; c++) {
       this.pending.set(`${entry.url}#${index + c}`, request);
     }
+    this.inFlightRequests++;
     const start = index * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE * chunks, entry.size) - 1;
     const source = this.fetchBytes(entry, start, end);
@@ -304,10 +306,19 @@ export class ArchiveStreamer {
         if (!request.superseded) this.failures.set(key, error.message);
       })
       .finally(() => {
+        this.inFlightRequests--;
         for (let c = 0; c < chunks; c++) {
           this.pending.delete(`${entry.url}#${index + c}`);
         }
       });
+  }
+
+  warmRange(entry, startChunk, endChunk, batchSize = 4) {
+    if (!entry) return;
+    for (let idx = startChunk; idx <= endChunk; idx += batchSize) {
+      const count = Math.min(batchSize, endChunk - idx + 1);
+      this.schedule(entry, idx, count);
+    }
   }
 
   /** Readiness is polled by native CD channels; callbacks only populate the cache, never a native buffer. */
