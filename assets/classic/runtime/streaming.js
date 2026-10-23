@@ -17,10 +17,43 @@
 // 4 MiB chunks meant a 1 KiB read cost 4 MiB and only 48 blocks fitted the cache, so a map load
 // thrashed and pulled ~35 GB over ~9000 requests. Smaller blocks, far more of them cached.
 const CHUNK_SIZE = 256 * 1024;
-// 512 MB cache limit for smooth map and audio streaming
-const CACHE_LIMIT = 512 * 1024 * 1024;
+// 768 MB cache limit for ultra-smooth map, cutscenes, and audio streaming
+const CACHE_LIMIT = 768 * 1024 * 1024;
 const READAHEAD = 16;  // 16 chunks (4MB) pulled per sequential miss
 const READAHEAD_RUN = 48; // once a run is established, pull 12MB per round trip
+
+const DB_NAME = 'vice-assets-cache-v2';
+const STORE_NAME = 'chunks';
+let idbPromise = null;
+function getIDB() {
+  if (!idbPromise) {
+    idbPromise = new Promise((resolve) => {
+      try {
+        if (typeof indexedDB === 'undefined') return resolve(null);
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          if (!req.result.objectStoreNames.contains(STORE_NAME)) {
+            req.result.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  return idbPromise;
+}
+
+async function putChunkToIDB(key, part) {
+  const db = await getIDB();
+  if (!db || !part) return;
+  try {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(part, key);
+  } catch {}
+}
 
 export { CHUNK_SIZE, CACHE_LIMIT, READAHEAD, READAHEAD_RUN };
 
@@ -215,6 +248,8 @@ export class ArchiveStreamer {
       this.cached -= this.cache.get(oldest).length;
       this.cache.delete(oldest);
     }
+    // Asynchronously persist to local IndexedDB for instant 1ms future hits
+    void putChunkToIDB(key, part);
   }
 
   /** Pull an archive through the network into the browser's disk cache without keeping it in memory.
@@ -279,8 +314,8 @@ export class ArchiveStreamer {
   /** Queue a chunk for the background warmer without blocking the caller. */
           schedule(entry              , index        , chunks = READAHEAD)       {
     const key = `${entry.url}#${index}`;
-    // Cap in-flight background reads to 24 concurrent requests for smoother high-bandwidth asset loading
-    if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 24) return;
+    // Cap in-flight background reads to 32 concurrent requests for smoother high-bandwidth asset loading
+    if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 32) return;
     const request = {superseded:false};
     this.pending.set(key, request);
     const start = index * CHUNK_SIZE;

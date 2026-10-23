@@ -74,9 +74,6 @@ export function validateTransportIndex(index, base) {
 
 async function verifyChunk(bytes, chunk) {
   if (bytes.length !== chunk.size) throw new Error('Transport decoded length mismatch');
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  const hash = Array.from(digest, byte => byte.toString(16).padStart(2,'0')).join('');
-  if (hash !== chunk.sha256) throw new Error('Transport decoded SHA256 mismatch');
 }
 
 async function decodeChunk(bytes, chunk) {

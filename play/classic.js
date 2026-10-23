@@ -412,6 +412,31 @@ async function install(instance) {
   FS.chdir('/gtavc');
 }
 
+async function warmGameAssets(streamer) {
+  try {
+    const cutsEntry = streamer.byName.get('cuts.img');
+    const gta3Entry = streamer.byName.get('gta3.img');
+    const pedEntry = streamer.byName.get('ped.ifp');
+
+    // 1. Warm initial cutscenes (Marco's Bistro, airport, ocean drive ~16MB)
+    if (cutsEntry) {
+      await streamer.warm([cutsEntry], 16 * 1024 * 1024);
+    }
+    // 2. Warm player & pedestrian animations (2.2MB)
+    if (pedEntry) {
+      await streamer.warm([pedEntry], 4 * 1024 * 1024);
+    }
+    // 3. Warm initial world models and vehicles (32MB)
+    if (gta3Entry) {
+      await streamer.warm([gta3Entry], 32 * 1024 * 1024);
+    }
+    // 4. Continue gently warming all cutscenes in the background
+    if (cutsEntry) {
+      await streamer.warm([cutsEntry], 120 * 1024 * 1024);
+    }
+  } catch (_) {}
+}
+
 play.addEventListener('click',async () => {
   if (started) return;
   started = true;
@@ -430,7 +455,10 @@ play.addEventListener('click',async () => {
     void createReVC({canvas,arguments:viewer?['-animviewer']:[],print:log,printErr:log,
       preRun:[instance => {
         instance.addRunDependency('vice-assets');
-        void install(instance).then(() => instance.removeRunDependency('vice-assets')).catch(failed);
+        void install(instance).then(() => {
+          instance.removeRunDependency('vice-assets');
+          void warmGameAssets(streamer);
+        }).catch(failed);
       }],
       onRuntimeInitialized(){native = this;phase = 'running';loading.hidden = true;canvas.focus();},
       onAbort:failed,
