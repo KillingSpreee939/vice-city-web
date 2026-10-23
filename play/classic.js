@@ -152,6 +152,7 @@ function warmSecondaryAssets(streamer) {
 
 retry.onclick = () => location.reload();
 const streamer = new ArchiveStreamer(message => {failed(message);throw new Error(message);}, failed);
+window.viceStreamer = streamer;
 window.viceClassic = {viewer:{
   inspect:createViewerInspector(()=>native),
   comparison:createNativeComparison(()=>native),
