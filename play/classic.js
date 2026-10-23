@@ -306,7 +306,7 @@ async function install(instance) {
       streamer.mount(instance,{mount:path.slice(0,slash),name:path.slice(slash+1),url,size:file.size,sha256:file.sha256});
       if(!viewer&&file.path.toLowerCase().endsWith('.adf'))prepareRadioContinuation(streamer,FS.lookupPath(path).node,file.path,file.size);
       loaded++;
-      loading.textContent = `Preparando Vice City · ${Math.round(100*loaded/count)}%`;
+      loading.textContent = `Vice City Hazırlanıyor · ${Math.round(100*loaded/count)}%`;
     } else jobs.push({file,path,url});
   }
   const supplementResponse = await fetch('/assets/classic/engine/texture-supplements.json');
@@ -355,7 +355,7 @@ async function install(instance) {
         if (failure) return;
         FS.writeFile(path,data,{canOwn:true});
         if (!supplement) loaded++;
-        loading.textContent = `Preparando Vice City · ${Math.round(100*loaded/count)}%`;
+        loading.textContent = `Vice City Hazırlanıyor · ${Math.round(100*loaded/count)}%`;
       } catch (error) {
         if (!failure) {failure=error;controller.abort();}
       }
@@ -398,11 +398,6 @@ async function install(instance) {
       if (ready < 0) throw new Error('Sons do menu indisponíveis.');
       await new Promise(resolve => setTimeout(resolve,5));
     }
-    // Pre-warm initial cutscene assets and models in the background to prevent intro stuttering
-    try {
-      void streamer.ensure('cuts.img', 0, 4 * 1024 * 1024);
-      void streamer.ensure('gta3.img', 0, 8 * 1024 * 1024);
-    } catch (_) {}
   }
   if (viewer) {
     const recipe = FS.readFile('/gtavc/data/gta_vc.dat',{encoding:'utf8'}).split(/\r?\n/).filter(line=>/^(IDE|COLFILE)\s/.test(line)).join('\n')+'\n';
@@ -410,31 +405,6 @@ async function install(instance) {
     FS.writeFile('/gtavc/data/special.txt',namedInspections.length?namedInspections.map(name=>name+' STD').join('\n')+'\n':'');
   }
   FS.chdir('/gtavc');
-}
-
-async function warmGameAssets(streamer) {
-  try {
-    const cutsEntry = streamer.byName.get('cuts.img');
-    const gta3Entry = streamer.byName.get('gta3.img');
-    const pedEntry = streamer.byName.get('ped.ifp');
-
-    // 1. Warm initial cutscenes (Marco's Bistro, airport, ocean drive ~16MB)
-    if (cutsEntry) {
-      await streamer.warm([cutsEntry], 16 * 1024 * 1024);
-    }
-    // 2. Warm player & pedestrian animations (2.2MB)
-    if (pedEntry) {
-      await streamer.warm([pedEntry], 4 * 1024 * 1024);
-    }
-    // 3. Warm initial world models and vehicles (32MB)
-    if (gta3Entry) {
-      await streamer.warm([gta3Entry], 32 * 1024 * 1024);
-    }
-    // 4. Continue gently warming all cutscenes in the background
-    if (cutsEntry) {
-      await streamer.warm([cutsEntry], 120 * 1024 * 1024);
-    }
-  } catch (_) {}
 }
 
 play.addEventListener('click',async () => {
@@ -455,10 +425,7 @@ play.addEventListener('click',async () => {
     void createReVC({canvas,arguments:viewer?['-animviewer']:[],print:log,printErr:log,
       preRun:[instance => {
         instance.addRunDependency('vice-assets');
-        void install(instance).then(() => {
-          instance.removeRunDependency('vice-assets');
-          void warmGameAssets(streamer);
-        }).catch(failed);
+        void install(instance).then(() => instance.removeRunDependency('vice-assets')).catch(failed);
       }],
       onRuntimeInitialized(){native = this;phase = 'running';loading.hidden = true;canvas.focus();},
       onAbort:failed,
