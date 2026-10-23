@@ -27,31 +27,73 @@ export { CHUNK_SIZE, CACHE_LIMIT, READAHEAD, READAHEAD_RUN };
 import {fetchArchiveRange, fetchArchiveRangeSync, readArchiveBytes, validateTransportIndex} from './transport.js';
 export {fetchArchiveRange};
 
+export class WarmQueue {
+  queue = [];
+  active = 0;
+  maxConcurrent = 6;
+  streamer = null;
+
+  constructor(streamer) {
+    this.streamer = streamer;
+  }
+
+  addRange(entry, startChunk, endChunk, batchSize = 4) {
+    if (!entry) return;
+    for (let idx = startChunk; idx <= endChunk; idx += batchSize) {
+      const count = Math.min(batchSize, endChunk - idx + 1);
+      this.queue.push({ entry, index: idx, chunks: count });
+    }
+    this.pump();
+  }
+
+  pump() {
+    while (this.active < this.maxConcurrent && this.queue.length > 0) {
+      const item = this.queue.shift();
+      const key = `${item.entry.url}#${item.index}`;
+      if (this.streamer.cache.has(key)) {
+        continue;
+      }
+      this.active++;
+      const start = item.index * CHUNK_SIZE;
+      const end = Math.min(item.entry.size - 1, (item.index + item.chunks) * CHUNK_SIZE - 1);
+      this.streamer.fetchBytes(item.entry, start, end)
+        .then(buffer => {
+          const bytes = new Uint8Array(buffer);
+          for (let offset = 0; offset < bytes.length; offset += CHUNK_SIZE) {
+            const partKey = `${item.entry.url}#${item.index + offset / CHUNK_SIZE}`;
+            if (!this.streamer.cache.has(partKey)) {
+              this.streamer.storeChunk(partKey, bytes.slice(offset, Math.min(offset + CHUNK_SIZE, bytes.length)));
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          this.active--;
+          this.pump();
+        });
+    }
+  }
+}
+
 export class ArchiveStreamer {
-                   cache = new Map                    ();
-                   byName = new Map                      ();
-          cached = 0;
-                   pending = new Map();
-                   failures = new Map();
-          run = 0;
-                   nextIndex = new Map                ();
-          worker                = null;
-          buffer                           = null;
-  /** Resolves once the worker is alive. It must be running before the engine ever spin-waits:
-      the main thread never yields afterwards, so a worker started later could never boot. */
-           ready                  ;
-
-  /** Plain field rather than a constructor parameter property: the latter is not erasable
-      syntax, and this file has to run under `node --test` for the cache tests. */
-                     onError                           ;
-                     onReadinessError;
-
+  cache = new Map();
+  byName = new Map();
+  cached = 0;
+  pending = new Map();
+  failures = new Map();
+  run = 0;
+  nextIndex = new Map();
+  worker = null;
+  bgWorker = null;
+  warmQueue = null;
+  buffer = null;
+  ready;
+  onError;
+  onReadinessError;
   transport = new Map();
   workerRequests = new Map();
-  inFlightRequests = 0;
   requestId = 0;
   workerFailed = false;
-  // WebKit worker networking waits for the page to yield; its native synchronous miss cannot spin-wait on it.
   syncNetworkReads = /AppleWebKit/.test(globalThis.navigator?.userAgent ?? '') && !/Chrome\/|Chromium\/|Edg\/|OPR\/|Android/.test(globalThis.navigator?.userAgent ?? '');
 
   constructor(onError, onReadinessError) {
@@ -61,38 +103,55 @@ export class ArchiveStreamer {
       this.ready = Promise.resolve();
       return;
     }
+    // Dedicated synchronous worker (zero queue latency for blocking game reads)
     this.worker = new Worker(new URL('./streaming-worker.js', import.meta.url), {type:'module'});
+    // Dedicated background worker (pre-warming & async streaming)
+    this.bgWorker = new Worker(new URL('./streaming-worker.js', import.meta.url), {type:'module'});
     this.buffer = new SharedArrayBuffer(CHUNK_SIZE * READAHEAD_RUN + 8);
-    const alive = new Promise((resolve, reject) => {
+    this.warmQueue = new WarmQueue(this);
+
+    const initWorker = (w, name) => new Promise((resolve, reject) => {
+      const deadline = setTimeout(() => finish(new Error(`${name} startup timed out`)), 15000);
       const finish = error => {
         clearTimeout(deadline);
-        this.worker.removeEventListener('message', started);
-        this.worker.removeEventListener('error', failed);
-        if (error) {this.workerFailed = true;this.worker.terminate();reject(error);}
+        w.removeEventListener('message', started);
+        w.removeEventListener('error', failed);
+        if (error) { this.workerFailed = true; w.terminate(); reject(error); }
         else resolve();
       };
       const started = () => finish();
-      const failed = event => {event.preventDefault();finish(new Error('Archive worker startup failed'));};
-      const deadline = setTimeout(() => finish(new Error('Archive worker startup timed out')), 15000);
-      this.worker.addEventListener('message', started, {once:true});
-      this.worker.addEventListener('error', failed, {once:true});
+      const failed = event => { event.preventDefault(); finish(new Error(`${name} startup failed`)); };
+      w.addEventListener('message', started, {once:true});
+      w.addEventListener('error', failed, {once:true});
     });
-    this.worker.addEventListener('message', ({data}) => {
+
+    const aliveSync = initWorker(this.worker, 'Archive sync worker');
+    const aliveBg = initWorker(this.bgWorker, 'Archive bg worker');
+
+    this.bgWorker.addEventListener('message', ({data}) => {
       const request = this.workerRequests.get(data.id);
       if (!request) return;
-      this.workerRequests.delete(data.id);clearTimeout(request.deadline);
+      this.workerRequests.delete(data.id);
+      clearTimeout(request.deadline);
       if (data.error) request.reject(new Error(data.error));
       else request.resolve(data.bytes.buffer);
     });
+    this.bgWorker.addEventListener('error', event => {
+      event.preventDefault();
+      for (const request of this.workerRequests.values()) {
+        clearTimeout(request.deadline);
+        request.reject(new Error('Archive bg worker failed'));
+      }
+      this.workerRequests.clear();
+    });
+
     this.worker.addEventListener('error', event => {
       event.preventDefault();
       this.workerFailed = true;
-      for (const request of this.workerRequests.values()) {clearTimeout(request.deadline);request.reject(new Error('Archive worker failed'));}
-      this.workerRequests.clear();
     });
-    this.ready = Promise.all([alive, this.loadTransport(), this.syncNetworkReads
+
+    this.ready = Promise.all([aliveSync, aliveBg, this.loadTransport(), this.syncNetworkReads
       ? import('./sha256-sync.js').then(module => {this.syncHash = module.sha256;}) : undefined]);
-    // Startup may fail before the player clicks; install still receives the rejected readiness.
     void this.ready.catch(() => {});
   }
 
@@ -110,13 +169,13 @@ export class ArchiveStreamer {
 
   fetchBytes(entry, start, end) {
     const request = {url:entry.url, file:entry.file, start, end, size:entry.size, transport:entry.transport};
-    if (!this.worker || !entry.transport && !entry.verify) return readArchiveBytes(request).then(bytes => bytes.buffer);
+    if (!this.bgWorker || !entry.transport && !entry.verify) return readArchiveBytes(request).then(bytes => bytes.buffer);
     return new Promise((resolve, reject) => {
       if (this.workerFailed) {reject(new Error('Archive worker failed'));return;}
       const id = ++this.requestId;
       const deadline = setTimeout(() => {this.workerRequests.delete(id);reject(new Error('Archive worker timed out'));}, 60000);
       this.workerRequests.set(id, {resolve,reject,deadline});
-      this.worker.postMessage({...request, transport:undefined, url:new URL(entry.url, location.href).href, id});
+      this.bgWorker.postMessage({...request, transport:undefined, url:new URL(entry.url, location.href).href, id});
     });
   }
 
@@ -157,11 +216,11 @@ export class ArchiveStreamer {
       url: file ? "" : new URL(url, location.href).href,
       file,
       start,
-      end: start + CHUNK_SIZE * chunks - 1,
+      end: Math.min(size - 1, start + CHUNK_SIZE * chunks - 1),
       size,
       sab: this.buffer,
     });
-    const deadline = Date.now() + 60_000;
+    const deadline = Date.now() + 15_000;
     while (Atomics.load(state, 0) === 0) {
       if (Date.now() > deadline) {
         this.onError(`Archive fetch timed out: ${url} chunk ${index}`);
@@ -186,20 +245,16 @@ export class ArchiveStreamer {
     const sequential = this.nextIndex.get(url) === index;
     this.run = sequential ? this.run + 1 : 0;
 
-    // Pull strictly 1 chunk (256 KB) synchronously to unblock the main thread in <250ms,
-    // guaranteeing Chrome's 5000ms "Sayfa Yanıt Vermiyor" watchdog timer never triggers!
+    // Pull strictly 1 chunk (256 KB) synchronously on dedicated sync worker (<250ms return)
     const span = this.fetchChunkSync(url, index, file, 1, size);
     this.nextIndex.set(url, index + 1);
     this.storeChunk(key, span);
 
-    // Asynchronously prefetch upcoming chunks into memory in the worker without stalling the engine!
+    // Queue upcoming chunks into background warmQueue
     const entry = this.byName.get((url.split(/[\\/]/).pop() ?? '').toLowerCase()) || { url, size, file };
     const ahead = sequential ? (this.run > 2 ? 6 : 4) : 2;
-    for (let i = 1; i <= ahead; i += 2) {
-      const targetIdx = index + i;
-      if (targetIdx * CHUNK_SIZE < size) {
-        this.schedule(entry, targetIdx, Math.min(2, Math.ceil((size - targetIdx * CHUNK_SIZE) / CHUNK_SIZE)));
-      }
+    if (this.warmQueue) {
+      this.warmQueue.addRange(entry, index + 1, Math.min(Math.floor((size - 1) / CHUNK_SIZE), index + ahead), 2);
     }
 
     return span;
@@ -315,10 +370,7 @@ export class ArchiveStreamer {
 
   warmRange(entry, startChunk, endChunk, batchSize = 4) {
     if (!entry) return;
-    for (let idx = startChunk; idx <= endChunk; idx += batchSize) {
-      const count = Math.min(batchSize, endChunk - idx + 1);
-      this.schedule(entry, idx, count);
-    }
+    this.warmQueue?.addRange(entry, startChunk, endChunk, batchSize);
   }
 
   /** Readiness is polled by native CD channels; callbacks only populate the cache, never a native buffer. */
@@ -355,10 +407,12 @@ export class ArchiveStreamer {
     if (!entry.file && transport?.size === entry.size && transport.sha256 === entry.sha256) {
       entry.transport = transport;
       this.worker?.postMessage({type:'mount',url:new URL(entry.url, location.href).href,transport});
+      this.bgWorker?.postMessage({type:'mount',url:new URL(entry.url, location.href).href,transport});
     }
     if (entry.verify) {
       if (!Number.isSafeInteger(entry.size) || entry.size <= 0 || entry.size > 2*1024*1024 || !/^[a-f0-9]{64}$/.test(entry.sha256)) throw new Error('Invalid verified texture');
       this.worker?.postMessage({type:'mount',url:new URL(entry.url,location.href).href,integrity:{size:entry.size,sha256:entry.sha256}});
+      this.bgWorker?.postMessage({type:'mount',url:new URL(entry.url,location.href).href,integrity:{size:entry.size,sha256:entry.sha256}});
     }
     this.byName.set(entry.name.toLowerCase(), entry);
     FS.mkdirTree(entry.mount);

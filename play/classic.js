@@ -138,15 +138,16 @@ function warmInitialCutscenesAndAudio(streamer) {
   const gta3 = streamer.byName.get('gta3.img');
   if (gta3) {
     streamer.warmRange(gta3, 0, 180, 4);
+    // 4. Pre-warm Ocean Beach models and common vehicles (chunks 181 to 260)
+    streamer.warmRange(gta3, 181, 260, 4);
   }
 }
 
 function warmSecondaryAssets(streamer) {
   if (viewer) return;
-  // Continue pre-warming Ocean Beach and vehicle models while user is on main menu
   const gta3 = streamer.byName.get('gta3.img');
   if (gta3) {
-    streamer.warmRange(gta3, 181, 260, 4);
+    streamer.warmRange(gta3, 261, 350, 4);
   }
 }
 
