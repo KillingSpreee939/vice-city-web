@@ -19,8 +19,8 @@
 const CHUNK_SIZE = 256 * 1024;
 // 512 MB cache limit for ultra-smooth map, cutscenes, and audio streaming
 const CACHE_LIMIT = 512 * 1024 * 1024;
-const READAHEAD = 16;  // 16 chunks (4MB) pulled per sequential miss
-const READAHEAD_RUN = 32; // once a run is established, pull 8MB per round trip
+const READAHEAD = 4;  // 4 chunks (1MB) pulled per sequential prefetch
+const READAHEAD_RUN = 8; // once a run is established, pull up to 2MB per prefetch
 
 export { CHUNK_SIZE, CACHE_LIMIT, READAHEAD, READAHEAD_RUN };
 
@@ -182,25 +182,26 @@ export class ArchiveStreamer {
       this.cache.set(key, cached);
       return cached;
     }
-    // Read ahead only while the file is being read sequentially. Doing it blindly pulled 8x the
-    // bytes for scattered reads, and the transfer — not the request count — is the bottleneck.
     const sequential = this.nextIndex.get(url) === index;
-    // No reporting from here: this runs inside the engine's synchronous read, and touching the DOM
-    // per chunk stalled the boot.
     this.run = sequential ? this.run + 1 : 0;
-    // For non-sequential reads, pull at least 4 chunks (1MB) so that full 3D models and cutscene assets don't stutter
-    const chunks = sequential ? (this.run > 2 ? READAHEAD_RUN : READAHEAD) : 4;
-    const span = this.fetchChunkSync(url, index, file, chunks, size);
-    this.nextIndex.set(url, index + span.length / CHUNK_SIZE);
-    for (let offset = 0; offset < span.length; offset += CHUNK_SIZE) {
-      const part = span.slice(offset, Math.min(offset + CHUNK_SIZE, span.length));
-      const partKey = `${url}#${index + offset / CHUNK_SIZE}`;
-      if (!this.cache.has(partKey)) {
-        this.storeChunk(partKey, part);
+
+    // Pull strictly 1 chunk (256 KB) synchronously to unblock the main thread in <250ms,
+    // guaranteeing Chrome's 5000ms "Sayfa Yanıt Vermiyor" watchdog timer never triggers!
+    const span = this.fetchChunkSync(url, index, file, 1, size);
+    this.nextIndex.set(url, index + 1);
+    this.storeChunk(key, span);
+
+    // Asynchronously prefetch upcoming chunks into memory in the worker without stalling the engine!
+    const entry = this.byName.get((url.split(/[\\/]/).pop() ?? '').toLowerCase()) || { url, size, file };
+    const ahead = sequential ? (this.run > 2 ? 6 : 4) : 2;
+    for (let i = 1; i <= ahead; i += 2) {
+      const targetIdx = index + i;
+      if (targetIdx * CHUNK_SIZE < size) {
+        this.schedule(entry, targetIdx, Math.min(2, Math.ceil((size - targetIdx * CHUNK_SIZE) / CHUNK_SIZE)));
       }
     }
-    const chunk = this.cache.get(key) ?? span.subarray(0, CHUNK_SIZE);
-    return chunk;
+
+    return span;
   }
 
   storeChunk(key, part) {
@@ -276,13 +277,15 @@ export class ArchiveStreamer {
     }
   }
 
-  /** Queue a chunk for the background warmer without blocking the caller. */
+  /** Queue chunks for background download without blocking the caller. */
           schedule(entry              , index        , chunks = READAHEAD)       {
     const key = `${entry.url}#${index}`;
-    // Cap in-flight background reads to 32 concurrent requests for smoother high-bandwidth asset loading
+    // Cap in-flight background reads to 32 concurrent requests
     if (this.cache.has(key) || this.pending.has(key) || this.pending.size >= 32) return;
     const request = {superseded:false};
-    this.pending.set(key, request);
+    for (let c = 0; c < chunks; c++) {
+      this.pending.set(`${entry.url}#${index + c}`, request);
+    }
     const start = index * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE * chunks, entry.size) - 1;
     const source = this.fetchBytes(entry, start, end);
@@ -297,8 +300,14 @@ export class ArchiveStreamer {
           this.storeChunk(partKey, part);
         }
       })
-      .catch(error => { if (!request.superseded) this.failures.set(key, error.message); })
-      .finally(() => this.pending.delete(key));
+      .catch(error => {
+        if (!request.superseded) this.failures.set(key, error.message);
+      })
+      .finally(() => {
+        for (let c = 0; c < chunks; c++) {
+          this.pending.delete(`${entry.url}#${index + c}`);
+        }
+      });
   }
 
   /** Readiness is polled by native CD channels; callbacks only populate the cache, never a native buffer. */

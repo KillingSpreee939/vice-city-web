@@ -20,7 +20,7 @@ onmessage = async ({data:request}) => {
   try {
     let bytes = workerCache.get(cacheKey);
 
-    if (!bytes) {
+    if (!bytes || bytes.byteLength === 0) {
       const verified = verifiedFiles.get(request.url);
       if (verified) {
         verified.pending ??= fetchArchiveRange(request.url,0,verified.size-1,verified.size).then(async data => {
@@ -49,7 +49,9 @@ onmessage = async ({data:request}) => {
       state[1] = bytes.length;
       Atomics.store(state, 0, 1);
     } else {
-      postMessage({id:request.id, bytes}, [bytes.buffer]);
+      // Transfer a separate slice so bytes in workerCache is NEVER neutered!
+      const transferBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      postMessage({id:request.id, bytes: new Uint8Array(transferBuffer)}, [transferBuffer]);
     }
   } catch (error) {
     if (state) {
