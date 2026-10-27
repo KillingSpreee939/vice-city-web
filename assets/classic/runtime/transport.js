@@ -3,31 +3,46 @@ const CHUNK_SIZE = 256 * 1024;
 export function fetchArchiveRangeSync(url, start, end, size, transport, sha256) {
   const request = new XMLHttpRequest();
   end = Math.min(end, size - 1);
-  request.open('GET', url, false);
+  const rangeUrl = url + (url.includes('?') ? '&' : '?') + 'range=' + start + '-' + end;
+  request.open('GET', rangeUrl, false);
   request.overrideMimeType('text/plain; charset=x-user-defined');
   request.setRequestHeader('Range', `bytes=${start}-${end}`);
   request.send();
   if (request.status !== 206) throw new Error(`Archive HTTP ${request.status}: ${url}`);
-  if (request.getResponseHeader('Content-Range') !== `bytes ${start}-${end}/${size}`) throw new Error(`Archive Content-Range mismatch: ${url}`);
-  if (request.responseText.length !== end - start + 1) throw new Error(`Archive truncated range: ${url}`);
-  const bytes = Uint8Array.from(request.responseText, character => character.charCodeAt(0) & 255);
-  if (transport) for (let offset = 0; offset < bytes.length; offset += CHUNK_SIZE) {
-    const chunk = transport.chunks[(start + offset) / CHUNK_SIZE];
-    const part = bytes.subarray(offset, Math.min(offset + CHUNK_SIZE, bytes.length));
+  const cr = request.getResponseHeader('Content-Range') || '';
+  const rangeMatch = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(cr);
+  if (!rangeMatch) throw new Error(`Archive Content-Range mismatch: ${url}`);
+  const rStart = Number(rangeMatch[1]);
+  const rEnd = Number(rangeMatch[2]);
+  const rSize = Number(rangeMatch[3]);
+  const targetEnd = Math.min(end, size - 1);
+  if (rStart > start || rEnd < targetEnd || (size && rSize !== size)) throw new Error(`Archive Content-Range mismatch: ${url}`);
+  const raw = request.responseText;
+  const offset = start - rStart;
+  const needed = targetEnd - start + 1;
+  const bytes = new Uint8Array(needed);
+  for (let i = 0; i < needed; i++) {
+    bytes[i] = raw.charCodeAt(offset + i) & 255;
+  }
+  if (transport) for (let off = 0; off < bytes.length; off += CHUNK_SIZE) {
+    const chunk = transport.chunks[(start + off) / CHUNK_SIZE];
+    const part = bytes.subarray(off, Math.min(off + CHUNK_SIZE, bytes.length));
     if (part.length !== chunk.size || sha256(part) !== chunk.sha256) throw new Error('Transport decoded SHA256 mismatch');
   }
   return bytes;
 }
 
 export async function fetchArchiveRange(url, start, end, size, {signal, attempts = 3} = {}) {
+  const targetEnd = Math.min(end, size - 1);
+  const rangeUrl = url + (url.includes('?') ? '&' : '?') + 'range=' + start + '-' + targetEnd;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
-    const abort = () => controller.abort(signal.reason);
+    const abort = () => controller.abort(signal?.reason);
     signal?.addEventListener('abort', abort, {once:true});
-    const deadline = setTimeout(() => controller.abort(), 15000);
+    const deadline = setTimeout(() => controller.abort(), 6000);
     try {
       signal?.throwIfAborted();
-      const response = await fetch(url, {headers:{Range:`bytes=${start}-${end}`}, signal:controller.signal});
+      const response = await fetch(rangeUrl, {headers:{Range:`bytes=${start}-${targetEnd}`}, signal:controller.signal});
       if (response.status !== 206) {
         await response.body?.cancel();
         const error = new Error(`Archive HTTP ${response.status}: ${url}`);
@@ -35,12 +50,22 @@ export async function fetchArchiveRange(url, start, end, size, {signal, attempts
         throw error;
       }
       const range = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(response.headers.get('Content-Range') ?? '');
-      if (!range || Number(range[1]) !== start || Number(range[2]) !== Math.min(end, size - 1) || Number(range[3]) !== size) {
+      if (!range) {
         await response.body?.cancel();
         throw new Error(`Archive Content-Range mismatch: ${url}`);
       }
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.length !== Math.min(end, size - 1) - start + 1) throw new Error(`Archive truncated range: ${url}`);
+      const rangeStart = Number(range[1]);
+      const rangeEnd = Number(range[2]);
+      const totalSize = Number(range[3]);
+      if (rangeStart > start || rangeEnd < targetEnd || (size && totalSize !== size)) {
+        await response.body?.cancel();
+        throw new Error(`Archive Content-Range mismatch: ${url}`);
+      }
+      const allBytes = new Uint8Array(await response.arrayBuffer());
+      const offsetInBytes = start - rangeStart;
+      const neededLength = targetEnd - start + 1;
+      const bytes = allBytes.subarray(offsetInBytes, offsetInBytes + neededLength);
+      if (bytes.length !== neededLength) throw new Error(`Archive truncated range: ${url}`);
       return bytes;
     } catch (error) {
       if (signal?.aborted || attempt === attempts - 1 || !(error.retryable || error instanceof TypeError || error.name === 'AbortError')) throw error;
@@ -99,8 +124,8 @@ export async function readArchiveBytes({url, file, start, end, size, transport})
   if (!transport) return fetchArchiveRange(url, start, end, size);
   if (!Number.isInteger(first) || end !== Math.min((last + 1) * CHUNK_SIZE, size) - 1 || transport.size !== size) throw new Error('Unaligned transport read');
   const compressed = new AbortController(), overall = new AbortController();
-  const compressedDeadline = setTimeout(() => compressed.abort(), 8000);
-  const overallDeadline = setTimeout(() => overall.abort(), 55000);
+  const compressedDeadline = setTimeout(() => compressed.abort(), 2500);
+  const overallDeadline = setTimeout(() => overall.abort(), 8000);
   try {
     if (typeof DecompressionStream !== 'function') throw new Error('Archive gzip unavailable');
     const output = new Uint8Array(end - start + 1);

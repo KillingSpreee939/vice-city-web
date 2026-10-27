@@ -169,11 +169,11 @@ export class ArchiveStreamer {
 
   fetchBytes(entry, start, end) {
     const request = {url:entry.url, file:entry.file, start, end, size:entry.size, transport:entry.transport};
-    if (!this.bgWorker || !entry.transport && !entry.verify) return readArchiveBytes(request).then(bytes => bytes.buffer);
+    if (!this.bgWorker) return readArchiveBytes(request).then(bytes => bytes.buffer);
     return new Promise((resolve, reject) => {
       if (this.workerFailed) {reject(new Error('Archive worker failed'));return;}
       const id = ++this.requestId;
-      const deadline = setTimeout(() => {this.workerRequests.delete(id);reject(new Error('Archive worker timed out'));}, 60000);
+      const deadline = setTimeout(() => {this.workerRequests.delete(id);reject(new Error('Archive worker timed out'));}, 20000);
       this.workerRequests.set(id, {resolve,reject,deadline});
       this.bgWorker.postMessage({...request, transport:undefined, url:new URL(entry.url, location.href).href, id});
     });
@@ -220,7 +220,7 @@ export class ArchiveStreamer {
       size,
       sab: this.buffer,
     });
-    const deadline = Date.now() + 15_000;
+    const deadline = Date.now() + 3_500;
     while (Atomics.load(state, 0) === 0) {
       if (Date.now() > deadline) {
         this.onError(`Archive fetch timed out: ${url} chunk ${index}`);

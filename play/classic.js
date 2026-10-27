@@ -129,17 +129,15 @@ function warmInitialCutscenesAndAudio(streamer) {
       streamer.warmRange(entry, 0, total - 1, 4);
     }
   }
-  // 2. Pre-warm entire intro cutscene sequence in anim/cuts.img (chunks 246 to 282)
+  // 2. Pre-warm entire intro cutscene sequence in anim/cuts.img (chunks 246 to 285)
   const cuts = streamer.byName.get('cuts.img');
   if (cuts) {
-    streamer.warmRange(cuts, 246, 282, 4);
+    streamer.warmRange(cuts, 246, 285, 4);
   }
-  // 3. Pre-warm ALL cutscene character & vehicle models from models/gta3.img (chunks 0 to 180)
+  // 3. Pre-warm ALL cutscene character & vehicle models from models/gta3.img (chunks 0 to 290)
   const gta3 = streamer.byName.get('gta3.img');
   if (gta3) {
-    streamer.warmRange(gta3, 0, 180, 4);
-    // 4. Pre-warm Ocean Beach models and common vehicles (chunks 181 to 260)
-    streamer.warmRange(gta3, 181, 260, 4);
+    streamer.warmRange(gta3, 0, 290, 4);
   }
 }
 
@@ -147,7 +145,7 @@ function warmSecondaryAssets(streamer) {
   if (viewer) return;
   const gta3 = streamer.byName.get('gta3.img');
   if (gta3) {
-    streamer.warmRange(gta3, 261, 350, 4);
+    streamer.warmRange(gta3, 291, 450, 4);
   }
 }
 
