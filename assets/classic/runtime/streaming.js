@@ -220,7 +220,7 @@ export class ArchiveStreamer {
       size,
       sab: this.buffer,
     });
-    const deadline = Date.now() + 3_500;
+    const deadline = Date.now() + 10_000;
     while (Atomics.load(state, 0) === 0) {
       if (Date.now() > deadline) {
         this.onError(`Archive fetch timed out: ${url} chunk ${index}`);
