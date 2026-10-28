@@ -379,10 +379,21 @@ async function install(instance) {
     while (!failure && next < jobs.length) {
       const {file,path,url,supplement} = jobs[next++];
       try {
-        const response = await fetch(url,{signal:controller.signal});
-        if (!response.ok) throw new Error('Arquivo indisponível: '+file.path);
-        const data = new Uint8Array(await response.arrayBuffer());
-        if (data.byteLength !== file.size) throw new Error('Arquivo incompleto: '+file.path);
+        let response, data;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            response = await fetch(url,{signal:controller.signal});
+            if (response.ok) {
+              data = new Uint8Array(await response.arrayBuffer());
+              if (data.byteLength === file.size) break;
+            }
+          } catch (e) {
+            if (controller.signal.aborted || attempt === 2) throw e;
+            await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+          }
+        }
+        if (!response || !response.ok) throw new Error('Arquivo indisponível: '+file.path);
+        if (!data || data.byteLength !== file.size) throw new Error('Arquivo incompleto: '+file.path);
         if (supplement && await textureHash(data) !== file.sha256) throw new Error('Arquivo sem integridade: '+file.path);
         if (failure) return;
         FS.writeFile(path,data,{canOwn:true});
