@@ -380,16 +380,20 @@ async function install(instance) {
       const {file,path,url,supplement} = jobs[next++];
       try {
         let response, data;
-        for (let attempt = 0; attempt < 3; attempt++) {
+        for (let attempt = 0; attempt < 4; attempt++) {
           try {
             response = await fetch(url,{signal:controller.signal});
+            if (response.status === 429 || response.status >= 500) {
+              await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
+              continue;
+            }
             if (response.ok) {
               data = new Uint8Array(await response.arrayBuffer());
               if (data.byteLength === file.size) break;
             }
           } catch (e) {
-            if (controller.signal.aborted || attempt === 2) throw e;
-            await new Promise(r => setTimeout(r, 100 * (attempt + 1)));
+            if (controller.signal.aborted || attempt === 3) throw e;
+            await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
           }
         }
         if (!response || !response.ok) throw new Error('Arquivo indisponível: '+file.path);
