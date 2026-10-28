@@ -383,26 +383,25 @@ async function install(instance) {
         for (let attempt = 0; attempt < 4; attempt++) {
           try {
             response = await fetch(url,{signal:controller.signal});
-            if (response.status === 429 || response.status >= 500) {
-              await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
-              continue;
-            }
             if (response.ok) {
               data = new Uint8Array(await response.arrayBuffer());
               if (data.byteLength === file.size) break;
+            } else {
+              await new Promise(r => setTimeout(r, 400 * (attempt + 1)));
             }
           } catch (e) {
             if (controller.signal.aborted || attempt === 3) throw e;
             await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
           }
         }
-        if (!response || !response.ok) throw new Error('Arquivo indisponível: '+file.path);
+        if (!response || !response.ok) throw new Error('Arquivo indisponível: '+file.path+' ('+(response?.status ?? 'err')+')');
         if (!data || data.byteLength !== file.size) throw new Error('Arquivo incompleto: '+file.path);
         if (supplement && await textureHash(data) !== file.sha256) throw new Error('Arquivo sem integridade: '+file.path);
         if (failure) return;
         FS.writeFile(path,data,{canOwn:true});
         if (!supplement) loaded++;
         loading.textContent = `Vice City Hazırlanıyor · ${Math.round(100*loaded/count)}%`;
+        await new Promise(r => setTimeout(r, 15));
       } catch (error) {
         if (!failure) {failure=error;controller.abort();}
       }
